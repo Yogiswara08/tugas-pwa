@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Dosen - Aplikasi Toko PWA</title>
+    <meta name="description" content="Halaman login dosen untuk mengakses Aplikasi Toko PWA - Manajemen Barang & Stok">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+
+        /* Animated gradient background */
+        body {
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 25%, #047857 50%, #059669 75%, #10b981 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
+            min-height: 100vh;
+        }
+
+        @keyframes gradientShift {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Floating particles */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            animation: float linear infinite;
+        }
+
+        @keyframes float {
+            0%   { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10%  { opacity: 1; }
+            90%  { opacity: 1; }
+            100% { transform: translateY(-100px) rotate(720deg); opacity: 0; }
+        }
+
+        /* Glassmorphism card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Input focus animation */
+        .input-field {
+            transition: all 0.3s ease;
+            border: 2px solid #e5e7eb;
+        }
+        .input-field:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+            outline: none;
+        }
+
+        /* Button animation */
+        .btn-login {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-login::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        .btn-login:hover::before { left: 100%; }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+        .btn-login:active { transform: translateY(0); }
+
+        /* Card entrance animation */
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .card-animate { animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+        /* Logo pulse */
+        @keyframes pulse-ring {
+            0%   { transform: scale(1); opacity: 0.8; }
+            50%  { transform: scale(1.1); opacity: 0.4; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+        .logo-ring { animation: pulse-ring 2.5s ease-in-out infinite; }
+
+        /* Toggle password button */
+        .toggle-pw {
+            transition: color 0.2s ease;
+        }
+        .toggle-pw:hover { color: #059669; }
+
+        /* Input wrapper */
+        .input-wrapper {
+            position: relative;
+        }
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            transition: color 0.3s ease;
+            pointer-events: none;
+        }
+        .input-wrapper:focus-within .input-icon { color: #059669; }
+
+        /* Loading spinner */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: none;
+        }
+
+        /* Shake animation for error */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .shake { animation: shake 0.4s ease; }
+
+        /* Input error state */
+        .input-error { border-color: #ef4444 !important; box-shadow: 0 0 0 4px rgba(239,68,68,0.1) !important; }
+
+        /* Decorative divider */
+        .divider { background: linear-gradient(to right, transparent, #d1fae5, transparent); height: 1px; }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4 relative overflow-hidden">
+
+    <!-- Floating Particles -->
+    <div id="particles" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+
+    <!-- Login Card -->
+    <div class="glass-card rounded-2xl shadow-2xl w-full max-w-md card-animate relative z-10">
+
+        <!-- Top Banner -->
+        <div class="bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-t-2xl px-8 py-6 text-center relative overflow-hidden">
+            <!-- Decorative circles -->
+            <div class="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full"></div>
+            <div class="absolute -bottom-6 -left-6 w-24 h-24 bg-white/10 rounded-full"></div>
+
+            <!-- Logo -->
+            <div class="relative inline-flex items-center justify-center mb-3">
+                <div class="logo-ring absolute w-20 h-20 bg-white/20 rounded-full"></div>
+                <div class="bg-white/20 rounded-full p-4 relative z-10 border border-white/30">
+                    <i class="fas fa-store text-white text-2xl"></i>
+                </div>
+            </div>
+
+            <h1 class="text-white font-bold text-xl tracking-wide">Aplikasi Toko PWA</h1>
+            <p class="text-emerald-100 text-sm mt-1">
+                <i class="fas fa-chalkboard-teacher mr-1"></i> Portal Dosen
+            </p>
+        </div>
+
+        <!-- Form Section -->
+        <div class="px-8 py-7">
+            <div class="text-center mb-6">
+                <h2 class="text-gray-800 font-bold text-2xl">Selamat Datang!</h2>
+                <p class="text-gray-500 text-sm mt-1">Masuk untuk mengelola data barang & stok</p>
+            </div>
+
+            <form id="form-login" class="space-y-5" novalidate>
+
+                <!-- Username Field -->
+                <div>
+                    <label for="username" class="block text-gray-700 text-sm font-semibold mb-2">
+                        <i class="fas fa-user-circle text-emerald-500 mr-1"></i> Username
+                    </label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user input-icon"></i>
+                        <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            autocomplete="username"
+                            placeholder="Masukkan username"
+                            required
+                            class="input-field w-full pl-10 pr-4 py-3 rounded-xl text-gray-700 bg-gray-50 text-sm"
+                        >
+                    </div>
+                    <p id="err-username" class="text-red-500 text-xs mt-1 hidden">
+                        <i class="fas fa-exclamation-circle mr-1"></i> Username tidak boleh kosong.
+                    </p>
+                </div>
+
+                <!-- Password Field -->
+                <div>
+                    <label for="password" class="block text-gray-700 text-sm font-semibold mb-2">
+                        <i class="fas fa-lock text-emerald-500 mr-1"></i> Password
+                    </label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            autocomplete="current-password"
+                            placeholder="Masukkan password..."
+                            required
+                            class="input-field w-full pl-10 pr-12 py-3 rounded-xl text-gray-700 bg-gray-50 text-sm"
+                        >
+                        <!-- Toggle Show/Hide Password -->
+                        <button
+                            type="button"
+                            id="toggle-password"
+                            class="toggle-pw absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 focus:outline-none"
+                            title="Tampilkan/Sembunyikan password"
+                            aria-label="Toggle password visibility"
+                        >
+                            <i class="fas fa-eye" id="icon-eye"></i>
+                        </button>
+                    </div>
+                    <p id="err-password" class="text-red-500 text-xs mt-1 hidden">
+                        <i class="fas fa-exclamation-circle mr-1"></i> Password tidak boleh kosong.
+                    </p>
+                </div>
+
+                <!-- Remember Me -->
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="remember-me" class="accent-emerald-500 w-4 h-4 rounded">
+                        <span class="text-sm text-gray-600">Ingat saya</span>
+                    </label>
+                    <a href="#" class="text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors hover:underline">
+                        Lupa password?
+                    </a>
+                </div>
+
+                <!-- Submit Button -->
+                <button
+                    type="submit"
+                    id="btn-login"
+                    class="btn-login w-full text-white font-bold py-3.5 px-6 rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 mt-2"
+                >
+                    <div class="spinner" id="spinner"></div>
+                    <i class="fas fa-sign-in-alt" id="icon-login"></i>
+                    <span id="btn-text">Masuk ke Sistem</span>
+                </button>
+
+            </form>
+
+            <!-- Divider -->
+            <div class="divider my-6"></div>
+
+            <!-- Info Section -->
+            <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+                <div class="flex items-start gap-3">
+                    <div class="bg-emerald-100 rounded-full p-2 mt-0.5 flex-shrink-0">
+                        <i class="fas fa-info-circle text-emerald-600 text-xs"></i>
+                    </div>
+                    <div>
+                        <p class="text-emerald-800 text-xs font-semibold mb-1">Informasi Akses</p>
+                        <p class="text-emerald-700 text-xs leading-relaxed">
+                            Masuk dengan Username: admin dan Password: 12345
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Card -->
+        <div class="bg-gray-50 rounded-b-2xl px-8 py-4 text-center border-t border-gray-100">
+            <p class="text-gray-400 text-xs">
+                <i class="fas fa-shield-alt text-emerald-400 mr-1"></i>
+                Sistem terlindungi &middot; &copy; 2025 Aplikasi Toko PWA
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ===== FLOATING PARTICLES =====
+        (function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 18; i++) {
+                const p = document.createElement('div');
+                const size = Math.random() * 60 + 10;
+                p.classList.add('particle');
+                p.style.cssText = `
+                    width: ${size}px;
+                    height: ${size}px;
+                    left: ${Math.random() * 100}%;
+                    animation-duration: ${Math.random() * 15 + 10}s;
+                    animation-delay: ${Math.random() * 10}s;
+                `;
+                container.appendChild(p);
+            }
+        })();
+
+        // ===== TOGGLE SHOW / HIDE PASSWORD =====
+        const toggleBtn = document.getElementById('toggle-password');
+        const passwordInput = document.getElementById('password');
+        const iconEye = document.getElementById('icon-eye');
+
+        toggleBtn.addEventListener('click', function () {
+            const isHidden = passwordInput.type === 'password';
+            passwordInput.type = isHidden ? 'text' : 'password';
+            iconEye.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
+        });
+
+        // ===== FORM VALIDATION =====
+        function clearError(fieldId, errId) {
+            document.getElementById(fieldId).classList.remove('input-error');
+            document.getElementById(errId).classList.add('hidden');
+        }
+
+        function showError(fieldId, errId) {
+            const el = document.getElementById(fieldId);
+            el.classList.add('input-error');
+            document.getElementById(errId).classList.remove('hidden');
+            el.classList.add('shake');
+            el.addEventListener('animationend', () => el.classList.remove('shake'), { once: true });
+        }
+
+        document.getElementById('username').addEventListener('input', () => clearError('username', 'err-username'));
+        document.getElementById('password').addEventListener('input', () => clearError('password', 'err-password'));
+
+        // ===== LOGIN FORM SUBMIT =====
+        document.getElementById('form-login').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            let valid = true;
+
+            // Validate
+            if (!username) { showError('username', 'err-username'); valid = false; }
+            if (!password) { showError('password', 'err-password'); valid = false; }
+            if (!valid) return;
+
+            // Set loading state
+            const btn = document.getElementById('btn-login');
+            const spinner = document.getElementById('spinner');
+            const iconLogin = document.getElementById('icon-login');
+            const btnText = document.getElementById('btn-text');
+
+            btn.disabled = true;
+            btn.classList.add('opacity-80', 'cursor-not-allowed');
+            spinner.style.display = 'block';
+            iconLogin.classList.add('hidden');
+            btnText.textContent = 'Memproses...';
+
+            try {
+                const BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+                    ? 'http://localhost/Platform/api-toko' 
+                    : window.location.origin + '/api-toko';
+
+                const res = await fetch(`${BASE_URL}/login.php`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const hasil = await res.json();
+
+                if (hasil.status === 'success') {
+                    localStorage.setItem('token_toko', hasil.token);
+
+                    // Remember me
+                    if (document.getElementById('remember-me').checked) {
+                        localStorage.setItem('remember_username', username);
+                    } else {
+                        localStorage.removeItem('remember_username');
+                    }
+
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Login Berhasil!',
+                        text: `Selamat datang, ${username}! Anda akan diarahkan ke halaman utama.`,
+                        confirmButtonColor: '#059669',
+                        timer: 1800,
+                        timerProgressBar: true,
+                        showConfirmButton: false
+                    });
+
+                    window.location.href = 'index.html';
+
+                } else {
+                    // Error SweetAlert
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Login Gagal',
+                        text: hasil.pesan || 'Username atau password salah.',
+                        confirmButtonColor: '#059669',
+                        confirmButtonText: 'Coba Lagi'
+                    });
+
+                    // Shake inputs
+                    ['username', 'password'].forEach(id => {
+                        const el = document.getElementById(id);
+                        el.classList.add('input-error');
+                        el.classList.add('shake');
+                        el.addEventListener('animationend', () => el.classList.remove('shake'), { once: true });
+                    });
+                }
+            } catch (err) {
+                await Swal.fire({
+                    icon: 'warning',
+                    title: 'Koneksi Gagal',
+                    html: `<p class="text-gray-600 text-sm">Tidak dapat menghubungi server.</p>
+                           <p class="text-gray-500 text-xs mt-1">Pastikan server XAMPP aktif dan URL API benar.</p>`,
+                    confirmButtonColor: '#059669',
+                    confirmButtonText: 'OK'
+                });
+                console.error(err);
+            } finally {
+                // Reset button state
+                btn.disabled = false;
+                btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                spinner.style.display = 'none';
+                iconLogin.classList.remove('hidden');
+                btnText.textContent = 'Masuk ke Sistem';
+            }
+        });
+
+        // ===== AUTO-FILL REMEMBER ME =====
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('remember_username');
+            if (saved) {
+                document.getElementById('username').value = saved;
+                document.getElementById('remember-me').checked = true;
+                document.getElementById('password').focus();
+            }
+        });
+    </script>
+</body>
+</html>

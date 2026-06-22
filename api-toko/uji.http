@@ -1,0 +1,26 @@
+### GET semua barang
+GET http://localhost/api-toko/get_barang.php
+
+### GET dengan parameter (opsional - tambahkan jika perlu)
+GET http://localhost/api-toko/get_barang.php?id=1
+
+### POST tambah barang baru
+POST http://localhost/api-toko/tambah_barang.php
+Content-Type: application/json
+
+{
+    "nama_barang": "Mouse Gaming RGB",
+    "harga": 150000
+}
+
+### POST tambah barang contoh 2
+POST http://localhost/api-toko/tambah_barang.php
+Content-Type: application/json
+
+{
+    "nama_barang": "Keyboard Mechanical",
+    "harga": 350000
+}
+
+### DELETE hapus barang berdasarkan ID
+DELETE http://localhost/api-toko/hapus_barang.php?id=1

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Toko PWA - Manajemen Barang + Stok</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100">
+
+    <!-- Navbar -->
+    <nav class="bg-emerald-600 text-white shadow-lg mb-8">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-store text-2xl"></i>
+                    <h1 class="text-2xl font-bold">Aplikasi Toko PWA</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-sm hidden md:block">
+                        <i class="fas fa-database"></i> Data Real-time dari Database
+                    </div>
+                    <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-md flex items-center">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-6">
+        <!-- Header Section -->
+        <div class="mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-emerald-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Daftar Barang</h2>
+                        <p class="text-gray-600 mt-1">
+                            <i class="fas fa-sync-alt text-emerald-500"></i> Data diambil dari server secara real-time
+                        </p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <div class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm">
+                            <i class="fas fa-check-circle"></i> Connected
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== SEARCH BAR ===== -->
+        <div class="mb-6">
+            <div class="bg-white rounded-xl shadow-md p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div class="relative flex-1">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <i class="fas fa-search text-emerald-400"></i>
+                    </span>
+                    <input type="text"
+                           id="input-cari"
+                           placeholder="Cari nama barang..."
+                           autocomplete="off"
+                           class="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition text-gray-700"
+                    >
+                    <button id="btn-clear-cari"
+                            onclick="clearCari()"
+                            class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition hidden"
+                            title="Hapus pencarian">
+                        <i class="fas fa-times-circle"></i>
+                    </button>
+                </div>
+                <div class="text-sm text-gray-500 whitespace-nowrap">
+                    <i class="fas fa-lightbulb text-amber-400"></i>
+                    Ketik untuk mencari secara otomatis
+                </div>
+            </div>
+        </div>
+
+        <!-- FORM TAMBAH BARANG (dengan Stok) -->
+        <div class="bg-white rounded-lg shadow-lg mb-8 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4">
+                <h3 class="text-white font-bold text-lg">
+                    <i class="fas fa-plus-circle mr-2"></i> Tambah Barang Baru
+                </h3>
+            </div>
+            <div class="p-6">
+                <form id="form-tambah-barang" class="grid md:grid-cols-4 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            <i class="fas fa-box text-emerald-500"></i> Nama Barang
+                        </label>
+                        <input type="text" 
+                               id="nama_barang" 
+                               name="nama_barang" 
+                               required
+                               placeholder="Contoh: Buku Tulis, Pensil..."
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            <i class="fas fa-money-bill-wave text-emerald-500"></i> Harga (Rp)
+                        </label>
+                        <input type="number" 
+                               id="harga" 
+                               name="harga" 
+                               required
+                               min="1"
+                               placeholder="Harga"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            <i class="fas fa-cubes text-emerald-500"></i> Stok
+                        </label>
+                        <input type="number" 
+                               id="stok" 
+                               name="stok" 
+                               required
+                               min="0"
+                               value="0"
+                               placeholder="Jumlah stok"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition">
+                    </div>
+
+                    <!-- Input File Gambar -->
+                    <div class="md:col-span-2">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            <i class="fas fa-image text-emerald-500"></i> Foto Barang
+                            <span class="text-gray-400 font-normal">(opsional, maks 2 MB)</span>
+                        </label>
+                        <div class="flex items-center gap-3">
+                            <label for="gambar" class="flex-1 cursor-pointer">
+                                <div id="drop-zone" class="w-full px-4 py-2 border-2 border-dashed border-emerald-300 rounded-lg bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-500 transition text-center text-sm text-gray-500">
+                                    <i class="fas fa-upload text-emerald-400 mr-1"></i>
+                                    <span id="file-label">Pilih atau seret foto...</span>
+                                </div>
+                                <input type="file"
+                                       id="gambar"
+                                       name="gambar"
+                                       accept="image/jpeg,image/png,image/gif,image/webp"
+                                       class="hidden">
+                            </label>
+                            <div id="preview-container" class="hidden">
+                                <img id="preview-img" src="#" alt="Preview"
+                                     class="h-12 w-12 object-cover rounded-lg border border-emerald-300 shadow-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-end md:col-span-2">
+                        <button type="submit" 
+                                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 transform hover:scale-[1.01]">
+                            <i class="fas fa-save mr-2"></i> Simpan Barang
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabel Barang (dengan kolom Stok) -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white">
+                            <th class="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                                <i class="fas fa-hashtag"></i> ID
+                            </th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                                <i class="fas fa-image"></i> Foto
+                            </th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                                <i class="fas fa-box"></i> Nama Barang
+                            </th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                                <i class="fas fa-tag"></i> Harga
+                            </th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                                <i class="fas fa-cubes"></i> Stok
+                            </th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold uppercase tracking-wider" style="min-width:160px">
+                                <i class="fas fa-cog"></i> Aksi
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabel-barang" class="divide-y divide-gray-200">
+                        <!-- Data akan diisi oleh JS -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Footer Tabel -->
+            <div class="bg-gray-50 px-6 py-3 border-t border-gray-200">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-600">
+                    <!-- Info data -->
+                    <div>
+                        <i class="fas fa-info-circle text-emerald-500"></i>
+                        <span id="info-data">Mengambil data dari server...</span>
+                    </div>
+
+                    <!-- Kontrol Paginasi -->
+                    <div id="kontrol-paginasi" class="flex items-center gap-2">
+                        <button id="btn-prev"
+                                onclick="gantiHalaman(currentPage - 1)"
+                                disabled
+                                class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                            <i class="fas fa-chevron-left"></i> Prev
+                        </button>
+
+                        <span id="info-halaman" class="text-xs text-gray-600 font-mono px-2">
+                            Hal. 1 / 1
+                        </span>
+
+                        <button id="btn-next"
+                                onclick="gantiHalaman(currentPage + 1)"
+                                disabled
+                                class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+
+                    <div>
+                        <i class="fas fa-code"></i> REST API | JSON Response
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Info API -->
+        <div class="mt-8 mb-8 grid md:grid-cols-3 gap-4">
+            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-server text-blue-600 text-xl"></i>
+                    <div>
+                        <p class="text-xs text-blue-600 uppercase font-bold">Endpoint API</p>
+                        <p class="text-sm font-mono text-gray-700">GET /api-toko/get_barang.php</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-database text-green-600 text-xl"></i>
+                    <div>
+                        <p class="text-xs text-green-600 uppercase font-bold">Database</p>
+                        <p class="text-sm font-mono text-gray-700">MySQL | db_toko.barang + stok</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-chart-line text-purple-600 text-xl"></i>
+                    <div>
+                        <p class="text-xs text-purple-600 uppercase font-bold">Status</p>
+                        <p class="text-sm font-mono text-gray-700">Real-time Data Fetch</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== MODAL EDIT BARANG (dengan Stok) ====== -->
+    <div id="modal-edit" class="fixed inset-0 z-50 hidden items-center justify-center">
+        <!-- Backdrop -->
+        <div id="modal-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="tutupModalEdit()"></div>
+
+        <!-- Modal Box -->
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 transform transition-all duration-300 scale-95 opacity-0" id="modal-box">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-amber-500 to-orange-500 rounded-t-2xl px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-white/20 rounded-full p-2">
+                        <i class="fas fa-edit text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-bold text-lg">Edit Barang</h3>
+                        <p class="text-amber-100 text-xs">Perbarui informasi barang</p>
+                    </div>
+                </div>
+                <button onclick="tutupModalEdit()" class="text-white/80 hover:text-white transition text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <form id="form-edit-barang" class="p-6 space-y-4">
+                <input type="hidden" id="edit-id">
+
+                <!-- ID Badge -->
+                <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 flex items-center space-x-2">
+                    <i class="fas fa-fingerprint text-amber-500"></i>
+                    <span class="text-sm text-gray-600">ID Barang: <strong id="edit-id-display" class="text-amber-600 font-mono"></strong></span>
+                </div>
+
+                <!-- Nama Barang -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        <i class="fas fa-box text-amber-500 mr-1"></i> Nama Barang
+                    </label>
+                    <input type="text"
+                           id="edit-nama-barang"
+                           required
+                           placeholder="Masukkan nama barang..."
+                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition">
+                </div>
+
+                <!-- Harga -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        <i class="fas fa-money-bill-wave text-amber-500 mr-1"></i> Harga (Rp)
+                    </label>
+                    <input type="number"
+                           id="edit-harga"
+                           required
+                           min="1"
+                           placeholder="Harga barang"
+                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition">
+                </div>
+
+                <!-- Stok -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        <i class="fas fa-cubes text-amber-500 mr-1"></i> Stok
+                    </label>
+                    <input type="number"
+                           id="edit-stok"
+                           required
+                           min="0"
+                           placeholder="Jumlah stok"
+                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition">
+                </div>
+
+                <!-- Foto Barang (Edit) -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        <i class="fas fa-image text-amber-500 mr-1"></i> Foto Barang
+                        <span class="text-gray-400 font-normal text-xs">(kosongkan jika tidak ingin ganti)</span>
+                    </label>
+
+                    <!-- Preview foto saat ini -->
+                    <div id="edit-current-photo" class="hidden mb-2 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <img id="edit-current-img" src="#" alt="Foto saat ini"
+                             class="h-14 w-14 object-cover rounded-lg border border-amber-300 shadow-sm">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-amber-700 font-semibold">Foto saat ini:</p>
+                            <p id="edit-current-filename" class="text-xs text-gray-500 truncate"></p>
+                        </div>
+                        <button type="button" onclick="hapusFotoEdit()"
+                                class="text-red-400 hover:text-red-600 transition text-sm" title="Hapus foto">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+
+                    <!-- Input file baru -->
+                    <div class="flex items-center gap-3">
+                        <label for="edit-gambar" class="flex-1 cursor-pointer">
+                            <div id="edit-drop-zone"
+                                 class="w-full px-4 py-2 border-2 border-dashed border-amber-300 rounded-lg bg-amber-50 hover:bg-amber-100 hover:border-amber-500 transition text-center text-sm text-gray-500">
+                                <i class="fas fa-upload text-amber-400 mr-1"></i>
+                                <span id="edit-file-label">Pilih foto baru...</span>
+                            </div>
+                            <input type="file"
+                                   id="edit-gambar"
+                                   name="gambar"
+                                   accept="image/jpeg,image/png,image/gif,image/webp"
+                                   class="hidden">
+                        </label>
+                        <div id="edit-preview-container" class="hidden">
+                            <img id="edit-preview-img" src="#" alt="Preview baru"
+                                 class="h-12 w-12 object-cover rounded-lg border border-amber-300 shadow-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex space-x-3 pt-2">
+                    <button type="button" onclick="tutupModalEdit()"
+                            class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 px-4 rounded-lg transition duration-200">
+                        <i class="fas fa-times mr-2"></i>Batal
+                    </button>
+                    <button type="submit" id="btn-simpan-edit"
+                            class="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold py-2.5 px-4 rounded-lg transition duration-200 transform hover:scale-[1.02] shadow-md">
+                        <i class="fas fa-save mr-2"></i>Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Memanggil file logika JS (sudah diperbarui untuk mendukung stok) -->
+    <script src="app.js"></script>
+</body>
+</html>
