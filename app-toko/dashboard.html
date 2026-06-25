@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Statistik - Aplikasi Toko PWA</title>
+    <meta name="description" content="Dashboard visual statistik stok dan nilai barang toko secara real-time">
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+    <style>
+        /* ===== Google-style font via system stack ===== */
+        body { font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        /* ===== Animated gradient navbar ===== */
+        .navbar-gradient {
+            background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
+        }
+
+        /* ===== Summary cards ===== */
+        .stat-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+        }
+
+        /* ===== Chart type selector buttons ===== */
+        .chart-btn {
+            transition: all 0.2s ease;
+        }
+        .chart-btn.active {
+            background: #059669;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(5,150,105,0.4);
+        }
+
+        /* ===== Canvas wrapper — responsive height ===== */
+        .chart-wrapper {
+            position: relative;
+            height: 380px;
+        }
+
+        /* ===== Pulse loader ===== */
+        @keyframes pulse-fade {
+            0%,100% { opacity:1; }
+            50%      { opacity:0.4; }
+        }
+        .pulse { animation: pulse-fade 1.4s ease-in-out infinite; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-emerald-50 min-h-screen">
+
+<!-- ====== NAVBAR ====== -->
+<nav class="navbar-gradient text-white shadow-lg mb-8">
+    <div class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-chart-bar text-2xl"></i>
+                <div>
+                    <h1 class="text-xl font-bold leading-tight">Dashboard Statistik</h1>
+                    <p class="text-emerald-200 text-xs">Aplikasi Toko PWA</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="index.html"
+                   class="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                    <i class="fas fa-table"></i> Data Barang
+                </a>
+                <button onclick="logout()"
+                        class="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-md">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container mx-auto px-6 pb-12">
+
+    <!-- ====== SUMMARY CARDS ====== -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8" id="summary-cards">
+        <!-- Diisi oleh JS -->
+        <div class="col-span-2 md:col-span-3 lg:col-span-6 text-center py-6 text-gray-400 pulse" id="cards-loading">
+            <i class="fas fa-spinner fa-spin text-2xl"></i>
+            <p class="text-sm mt-2">Memuat statistik...</p>
+        </div>
+    </div>
+
+    <!-- ====== CHART SECTION ====== -->
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+
+        <!-- Chart Header -->
+        <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-white font-bold text-lg">
+                        <i class="fas fa-chart-bar mr-2"></i>Grafik Statistik Barang
+                    </h2>
+                    <p class="text-emerald-200 text-xs mt-0.5">Top 10 barang berdasarkan stok terbanyak</p>
+                </div>
+
+                <!-- Dataset selector -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-emerald-200 text-xs font-semibold uppercase tracking-wider">Data:</span>
+                    <button onclick="gantiDataset('stok')"   id="ds-stok"   class="chart-btn active  px-3 py-1.5 rounded-lg text-xs font-semibold border border-white/30 text-white">
+                        <i class="fas fa-cubes mr-1"></i>Stok
+                    </button>
+                    <button onclick="gantiDataset('harga')"  id="ds-harga"  class="chart-btn px-3 py-1.5 rounded-lg text-xs font-semibold border border-white/30 text-white">
+                        <i class="fas fa-tag mr-1"></i>Harga
+                    </button>
+                    <button onclick="gantiDataset('nilai')"  id="ds-nilai"  class="chart-btn px-3 py-1.5 rounded-lg text-xs font-semibold border border-white/30 text-white">
+                        <i class="fas fa-money-bill-wave mr-1"></i>Nilai Stok
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Type Tabs -->
+        <div class="border-b border-gray-100 px-6 py-3 flex items-center gap-2 flex-wrap bg-gray-50">
+            <span class="text-gray-500 text-xs font-semibold uppercase tracking-wider mr-1">Tipe Grafik:</span>
+
+            <button onclick="gantiTipe('bar')"      id="btn-bar"      class="chart-btn active flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border border-gray-300 text-gray-700">
+                <i class="fas fa-chart-bar"></i> Bar
+            </button>
+            <button onclick="gantiTipe('pie')"      id="btn-pie"      class="chart-btn flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border border-gray-300 text-gray-700">
+                <i class="fas fa-chart-pie"></i> Pie
+            </button>
+            <button onclick="gantiTipe('doughnut')" id="btn-doughnut" class="chart-btn flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border border-gray-300 text-gray-700">
+                <i class="fas fa-circle-notch"></i> Doughnut
+            </button>
+            <button onclick="gantiTipe('line')"     id="btn-line"     class="chart-btn flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold border border-gray-300 text-gray-700">
+                <i class="fas fa-chart-line"></i> Line
+            </button>
+
+            <!-- Refresh -->
+            <button onclick="muatStatistik()" title="Refresh data"
+                    class="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border border-emerald-300 text-emerald-600 hover:bg-emerald-50 transition">
+                <i class="fas fa-sync-alt" id="icon-refresh"></i> Refresh
+            </button>
+        </div>
+
+        <!-- Canvas -->
+        <div class="p-6">
+            <div class="chart-wrapper" id="chart-loading-wrap">
+                <div id="chart-loading" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 pulse">
+                    <i class="fas fa-spinner fa-spin text-3xl text-emerald-500"></i>
+                    <p class="text-sm mt-3">Memuat data grafik...</p>
+                </div>
+                <canvas id="myChart" class="hidden"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart Description -->
+        <div class="bg-gray-50 border-t border-gray-100 px-6 py-3">
+            <p class="text-xs text-gray-500" id="chart-desc">
+                <i class="fas fa-info-circle text-emerald-400"></i>
+                <span id="desc-text">Grafik <strong>Bar</strong> — membandingkan nilai antar barang secara berdampingan. Bagus untuk perbandingan langsung.</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- ====== KETERANGAN TIPE CHART ====== -->
+    <div class="mt-6 grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl p-4 border-l-4 border-emerald-500 shadow-sm">
+            <div class="flex items-center gap-3 mb-2">
+                <i class="fas fa-chart-bar text-emerald-500 text-xl"></i>
+                <h3 class="font-bold text-gray-800">Bar Chart</h3>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">Batang vertikal berdampingan. Terbaik untuk <strong>membandingkan nilai</strong> antar barang secara langsung dan intuitif.</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border-l-4 border-blue-500 shadow-sm">
+            <div class="flex items-center gap-3 mb-2">
+                <i class="fas fa-chart-pie text-blue-500 text-xl"></i>
+                <h3 class="font-bold text-gray-800">Pie Chart</h3>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">Lingkaran penuh terbagi per irisan. Cocok untuk melihat <strong>persentase kontribusi</strong> setiap barang terhadap total nilai gudang.</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border-l-4 border-purple-500 shadow-sm">
+            <div class="flex items-center gap-3 mb-2">
+                <i class="fas fa-circle-notch text-purple-500 text-xl"></i>
+                <h3 class="font-bold text-gray-800">Doughnut</h3>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">Lingkaran berlubang di tengah. Mirip Pie namun terlihat <strong>lebih modern dan lega</strong>. Tengahnya bisa diisi informasi total.</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border-l-4 border-orange-500 shadow-sm">
+            <div class="flex items-center gap-3 mb-2">
+                <i class="fas fa-chart-line text-orange-500 text-xl"></i>
+                <h3 class="font-bold text-gray-800">Line Chart</h3>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">Titik dihubungkan garis. Lebih umum untuk <strong>tren waktu</strong>, tapi tetap berguna untuk melihat fluktuasi nilai antar produk.</p>
+        </div>
+    </div>
+
+    <!-- ====== INFO API ====== -->
+    <div class="mt-6 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-server text-blue-500 text-lg"></i>
+            <div>
+                <p class="text-xs text-blue-600 uppercase font-bold">Endpoint Statistik</p>
+                <p class="text-sm font-mono text-gray-700">GET /api-toko/statistik.php</p>
+            </div>
+            <div class="ml-auto">
+                <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full">
+                    <i class="fas fa-circle text-emerald-500 text-[8px] mr-1"></i>Live
+                </span>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /container -->
+
+
+<script>
+// ============================================================
+// GUARD: Cek token login
+// ============================================================
+const myToken = localStorage.getItem('token_toko');
+if (!myToken) {
+    alert('Anda harus login terlebih dahulu!');
+    window.location.href = 'login.html';
+}
+
+// ============================================================
+// Konfigurasi URL (sama seperti app.js — dinamis localhost/hosting)
+// ============================================================
+const isLocalhost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const BASE_URL    = isLocalhost
+    ? 'http://localhost/Platform/api-toko'
+    : window.location.origin + '/api-toko';
+
+const API_STATISTIK = `${BASE_URL}/statistik.php?token=${myToken}`;
+
+// ============================================================
+// State
+// ============================================================
+let chartInstance  = null;   // Chart.js instance
+let currentType    = 'bar';  // tipe chart aktif
+let currentDataset = 'stok'; // dataset aktif: stok | harga | nilai
+let rawData        = null;   // data mentah dari API
+
+// Palet warna menarik
+const PALETTE = [
+    'rgba(16,185,129,0.85)',  // emerald
+    'rgba(59,130,246,0.85)',  // blue
+    'rgba(245,158,11,0.85)',  // amber
+    'rgba(239,68,68,0.85)',   // red
+    'rgba(139,92,246,0.85)',  // violet
+    'rgba(236,72,153,0.85)',  // pink
+    'rgba(20,184,166,0.85)',  // teal
+    'rgba(249,115,22,0.85)',  // orange
+    'rgba(34,197,94,0.85)',   // green
+    'rgba(99,102,241,0.85)',  // indigo
+];
+const PALETTE_BORDER = PALETTE.map(c => c.replace('0.85','1'));
+
+// ============================================================
+// Deskripsi tiap tipe chart
+// ============================================================
+const CHART_DESC = {
+    bar:      'Grafik <strong>Bar</strong> — membandingkan nilai antar barang secara berdampingan. Bagus untuk perbandingan langsung.',
+    pie:      'Grafik <strong>Pie</strong> — menunjukkan persentase kontribusi setiap barang terhadap total keseluruhan.',
+    doughnut: 'Grafik <strong>Doughnut</strong> — serupa Pie namun berlubang di tengah, tampilan lebih modern dan mudah dibaca.',
+    line:     'Grafik <strong>Line</strong> — titik-titik dihubungkan garis, memperlihatkan fluktuasi nilai dari satu barang ke barang lain.',
+};
+
+// ============================================================
+// Muat data dari API statistik.php
+// ============================================================
+async function muatStatistik() {
+    // Animasi ikon refresh
+    const iconRefresh = document.getElementById('icon-refresh');
+    iconRefresh.classList.add('fa-spin');
+
+    try {
+        const res    = await fetch(API_STATISTIK);
+        const result = await res.json();
+
+        if (result.status !== 'success') throw new Error(result.message || 'Gagal ambil data');
+
+        rawData = result;
+
+        // Render kartu ringkasan
+        renderSummaryCards(result.summary);
+
+        // Render chart
+        renderChart();
+
+    } catch (err) {
+        console.error(err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal Memuat Statistik',
+            text: err.message || 'Periksa koneksi ke server.',
+            confirmButtonColor: '#059669'
+        });
+    } finally {
+        iconRefresh.classList.remove('fa-spin');
+    }
+}
+
+// ============================================================
+// Render kartu ringkasan di atas chart
+// ============================================================
+function renderSummaryCards(s) {
+    const container = document.getElementById('summary-cards');
+    document.getElementById('cards-loading')?.remove();
+
+    const fmt  = (n) => new Intl.NumberFormat('id-ID').format(n);
+    const fmtRp = (n) => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0}).format(n);
+
+    container.innerHTML = `
+        <!-- Total Produk -->
+        <div class="stat-card bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-2">
+                <div class="bg-emerald-100 rounded-lg p-2"><i class="fas fa-box text-emerald-600"></i></div>
+                <span class="text-xs text-gray-400 font-semibold uppercase">Produk</span>
+            </div>
+            <p class="text-2xl font-bold text-gray-800">${fmt(s.total_produk)}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Total jenis barang</p>
+        </div>
+
+        <!-- Total Stok -->
+        <div class="stat-card bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-2">
+                <div class="bg-blue-100 rounded-lg p-2"><i class="fas fa-cubes text-blue-600"></i></div>
+                <span class="text-xs text-gray-400 font-semibold uppercase">Stok</span>
+            </div>
+            <p class="text-2xl font-bold text-gray-800">${fmt(s.total_stok)}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Unit tersedia</p>
+        </div>
+
+        <!-- Total Nilai -->
+        <div class="stat-card bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-2">
+                <div class="bg-amber-100 rounded-lg p-2"><i class="fas fa-money-bill-wave text-amber-600"></i></div>
+                <span class="text-xs text-gray-400 font-semibold uppercase">Nilai</span>
+            </div>
+            <p class="text-xl font-bold text-gray-800">${fmtRp(s.total_nilai)}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Total nilai gudang</p>
+        </div>
+
+        <!-- Rata Harga -->
+        <div class="stat-card bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-2">
+                <div class="bg-purple-100 rounded-lg p-2"><i class="fas fa-tag text-purple-600"></i></div>
+                <span class="text-xs text-gray-400 font-semibold uppercase">Rata Harga</span>
+            </div>
+            <p class="text-xl font-bold text-gray-800">${fmtRp(Math.round(s.rata_harga))}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Rata-rata harga barang</p>
+        </div>
+
+        <!-- Stok Habis -->
+        <div class="stat-card bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-2">
+                <div class="bg-red-100 rounded-lg p-2"><i class="fas fa-times-circle text-red-600"></i></div>
+                <span class="text-xs text-gray-400 font-semibold uppercase">Habis</span>
+            </div>
+            <p class="text-2xl font-bold text-red-600">${fmt(s.produk_habis)}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Barang stok = 0</p>
+        </div>
+
+        <!-- Stok Menipis -->
+        <div class="stat-card bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-2">
+                <div class="bg-orange-100 rounded-lg p-2"><i class="fas fa-exclamation-triangle text-orange-600"></i></div>
+                <span class="text-xs text-gray-400 font-semibold uppercase">Menipis</span>
+            </div>
+            <p class="text-2xl font-bold text-orange-600">${fmt(s.produk_menipis)}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Barang stok ≤ 5</p>
+        </div>
+    `;
+}
+
+// ============================================================
+// Render / Update Chart.js
+// ============================================================
+function renderChart() {
+    if (!rawData) return;
+
+    const labels = rawData.labels;
+    const values = rawData.values[currentDataset];
+
+    // Sembunyikan loading, tampilkan canvas
+    const loading = document.getElementById('chart-loading');
+    const canvas  = document.getElementById('myChart');
+    if (loading) loading.classList.add('hidden');
+    canvas.classList.remove('hidden');
+
+    // Label dataset yang tampil di legenda
+    const dsLabel = {
+        stok:  'Jumlah Stok (unit)',
+        harga: 'Harga Satuan (Rp)',
+        nilai: 'Nilai Stok (Rp)',
+    }[currentDataset];
+
+    // Config dataset khusus per tipe
+    const isCircular = (currentType === 'pie' || currentType === 'doughnut');
+
+    const dataset = {
+        label:           dsLabel,
+        data:            values,
+        backgroundColor: isCircular ? PALETTE : PALETTE[0],
+        borderColor:     isCircular ? PALETTE_BORDER : PALETTE_BORDER[0],
+        borderWidth:     isCircular ? 2 : 2,
+        borderRadius:    currentType === 'bar' ? 6 : 0,
+        fill:            currentType === 'line',
+        tension:         0.4,
+        pointBackgroundColor: PALETTE[0],
+        pointRadius:     currentType === 'line' ? 5 : 0,
+    };
+
+    const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: isCircular,
+                position: 'right',
+                labels: { font: { size: 11 }, padding: 16, usePointStyle: true }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(ctx) {
+                        const val = ctx.parsed.y ?? ctx.parsed;
+                        if (currentDataset === 'stok') return ` ${val.toLocaleString('id-ID')} unit`;
+                        return ' Rp ' + val.toLocaleString('id-ID');
+                    }
+                }
+            }
+        },
+        scales: isCircular ? {} : {
+            x: {
+                grid: { display: false },
+                ticks: { font: { size: 11 }, maxRotation: 30 }
+            },
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                ticks: {
+                    font: { size: 11 },
+                    callback: (v) => currentDataset === 'stok'
+                        ? v.toLocaleString('id-ID')
+                        : 'Rp ' + (v/1000).toFixed(0) + 'k'
+                }
+            }
+        },
+        animation: { duration: 600, easing: 'easeInOutQuart' }
+    };
+
+    if (chartInstance) {
+        // Update chart yang sudah ada (lebih efisien)
+        chartInstance.destroy();
+    }
+
+    chartInstance = new Chart(canvas, {
+        type:    currentType,
+        data:    { labels, datasets: [dataset] },
+        options: options
+    });
+}
+
+// ============================================================
+// Ganti tipe chart (bar / pie / doughnut / line)
+// ============================================================
+function gantiTipe(tipe) {
+    currentType = tipe;
+
+    // Update tombol aktif
+    ['bar','pie','doughnut','line'].forEach(t => {
+        const btn = document.getElementById(`btn-${t}`);
+        btn.classList.toggle('active', t === tipe);
+    });
+
+    // Update deskripsi
+    document.getElementById('desc-text').innerHTML = CHART_DESC[tipe];
+
+    renderChart();
+}
+
+// ============================================================
+// Ganti dataset (stok / harga / nilai)
+// ============================================================
+function gantiDataset(ds) {
+    currentDataset = ds;
+
+    ['stok','harga','nilai'].forEach(d => {
+        const btn = document.getElementById(`ds-${d}`);
+        btn.classList.toggle('active', d === ds);
+    });
+
+    renderChart();
+}
+
+// ============================================================
+// Logout
+// ============================================================
+function logout() {
+    Swal.fire({
+        title: 'Yakin ingin keluar?',
+        text: 'Sesi login Anda akan dihapus',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Ya, Keluar!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            localStorage.removeItem('token_toko');
+            window.location.href = 'login.html';
+        }
+    });
+}
+window.logout = logout;
+window.gantiTipe    = gantiTipe;
+window.gantiDataset = gantiDataset;
+window.muatStatistik = muatStatistik;
+
+// ============================================================
+// Auto-load saat halaman siap
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+    muatStatistik();
+});
+</script>
+</body>
+</html>
